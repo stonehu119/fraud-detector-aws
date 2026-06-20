@@ -2,7 +2,7 @@
   "name": "fraud-detector-aws-api",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
