@@ -2,6 +2,7 @@ import type { Request, Response } from 'express'
 import type { ErrorResponse, Transaction, TransactionResponse } from '../types/transaction.js'
 import { v4 as uuid } from 'uuid'
 import { detectFraud } from '../logic/detector.js'
+import sendFlaggedTransaction from '../lib/sqs.js'
 
 const VALID_TRANSACTION_TYPES = ['withdrawal', 'deposit', 'transfer']
 
@@ -18,12 +19,24 @@ export async function handleTransaction(req: Request, res: Response<TransactionR
     const transaction = body as Transaction
 
     // check for fraud
+    const transactionId = uuid()
     const fraudResult = await detectFraud(transaction)
+
+    // send to SQS if fraudulent
+    if (fraudResult.flagged) {
+      await sendFlaggedTransaction({
+        ...transaction,
+        transaction_id: transactionId,
+        reasons: fraudResult.reasons,
+        flagged_at: new Date().toISOString()
+      })
+    }
+
     res.status(200).json({
-      transaction_id: uuid(),
+      transaction_id: transactionId,
       account_id: transaction.account_id,
       status: fraudResult.flagged ? 'flagged' : 'approved',
-      reasons: fraudResult.reasons,
+      reasons: fraudResult.reasons, // honestly maybe this isn't a good idea LOL
     })
   } catch (err) {
     console.error(`${err}\nRequest: ${JSON.stringify(req.body, null, 2)}`)

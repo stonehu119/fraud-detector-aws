@@ -1,7 +1,9 @@
+export type TransactionType = 'withdrawal' | 'deposit' | 'transfer'
+
 export interface Transaction {
   account_id: string
   amount: number
-  transaction_type: 'withdrawal' | 'deposit' | 'transfer'
+  transaction_type: TransactionType
   location: string
   timestamp: string
 }
