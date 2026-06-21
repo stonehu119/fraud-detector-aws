@@ -1,10 +1,12 @@
-import type { Transaction } from '../types/transaction.ts'
+import type { Transaction, FraudCheckResult, FraudReason } from '../types/transaction.js'
 
 const THRESHOLD = 10000
 
-export async function isFraud(transaction: Transaction): Promise<boolean> {
+export async function detectFraud(transaction: Transaction): Promise<FraudCheckResult> {
+  const reasons: FraudReason[] = []
+
   if (transaction.amount >= THRESHOLD) {
-    return true
+    reasons.push('LARGE_WITHDRAWAL')
   }
 
   // check for different geographic regions within short time
@@ -13,7 +15,10 @@ export async function isFraud(transaction: Transaction): Promise<boolean> {
 
   // temp time delay to simulate long processing time
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  await delay(5000)
+  await delay(2000)
 
-  return false
+  return {
+    flagged: reasons.length > 0,
+    reasons,
+  }
 }

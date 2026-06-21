@@ -10,7 +10,6 @@
     // For nodejs:
     "lib": ["esnext"],
     "types": ["node"],
-    "sourceMap": true,
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,

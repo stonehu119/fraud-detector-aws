@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import type { ErrorResponse, Transaction, TransactionResponse } from '../types/transaction.js'
 import { v4 as uuid } from 'uuid'
-import { isFraud } from '../logic/detector.js'
+import { detectFraud } from '../logic/detector.js'
 
 const VALID_TRANSACTION_TYPES = ['withdrawal', 'deposit', 'transfer']
 
@@ -18,14 +18,15 @@ export async function handleTransaction(req: Request, res: Response<TransactionR
     const transaction = body as Transaction
 
     // check for fraud
-    const fraudResult = await isFraud(transaction)
-
+    const fraudResult = await detectFraud(transaction)
     res.status(200).json({
       transaction_id: uuid(),
       account_id: transaction.account_id,
-      status: fraudResult ? 'flagged' : 'approved',
+      status: fraudResult.flagged ? 'flagged' : 'approved',
+      reasons: fraudResult.reasons,
     })
-  } catch {
+  } catch (err) {
+    console.error(`${err}\nRequest: ${JSON.stringify(req.body, null, 2)}`)
     res.status(500).json({ error: 'Internal server error' })
   }
 }

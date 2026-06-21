@@ -12,7 +12,17 @@ export interface TransactionResponse {
   transaction_id: string
   account_id: string
   status: FraudResult
-  reason?: string
+  reasons: FraudReason[]
+}
+
+export type FraudReason =
+  | 'LARGE_WITHDRAWAL'
+  | 'GEO_ANOMALY'
+  | 'FAILED_LOGIN_ATTEMPTS'
+
+export interface FraudCheckResult {
+  flagged: boolean
+  reasons: FraudReason[]
 }
 
 export interface ErrorResponse {
