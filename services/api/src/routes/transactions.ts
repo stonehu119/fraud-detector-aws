@@ -25,7 +25,8 @@ export async function handleTransaction(req: Request, res: Response<TransactionR
       status: fraudResult.flagged ? 'flagged' : 'approved',
       reasons: fraudResult.reasons,
     })
-  } catch {
+  } catch (err) {
+    console.error(`${err}\nRequest: ${JSON.stringify(req.body, null, 2)}`)
     res.status(500).json({ error: 'Internal server error' })
   }
 }
