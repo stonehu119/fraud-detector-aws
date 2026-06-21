@@ -1,8 +1,6 @@
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs"
 import type { Transaction, FraudReason, TransactionType } from "../types/transaction.js"
 
-const QUEUE_URL = process.env.QUEUE_URL
-
 const sqs = new SQSClient({})
 
 export interface FlaggedTransactionMessage {
@@ -19,6 +17,7 @@ export interface FlaggedTransactionMessage {
 export default async function sendFlaggedTransaction(
     message: FlaggedTransactionMessage
 ): Promise<void> {
+    const QUEUE_URL = process.env.QUEUE_URL
     if (!QUEUE_URL) {
         throw new Error("QUEUE_URL is not set")
     }
