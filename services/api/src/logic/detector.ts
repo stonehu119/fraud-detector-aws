@@ -50,7 +50,6 @@ export async function detectFraud(transaction: Transaction): Promise<FraudCheckR
     },
     Select: 'COUNT',
   }))
-  console.warn(recentFailures.Count)
 
   if ((recentFailures.Count ?? 0) >= FAILED_LOGIN_THRESHOLD) {
     reasons.push('FAILED_LOGIN_ATTEMPTS')
