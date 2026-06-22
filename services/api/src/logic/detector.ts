@@ -14,7 +14,7 @@ export async function detectFraud(transaction: Transaction): Promise<FraudCheckR
   // check for multiple failed logins beforehand
 
   // temp time delay to simulate long processing time
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
   await delay(2000)
 
   return {
