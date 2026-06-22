@@ -32,9 +32,19 @@ export class InfrastructureStack extends cdk.Stack {
       clusterName: 'fraud-detection-cluster-cdk'
     })
 
+    const flaggedDlq = new sqs.Queue(this, 'flagged-transactions-dlq-cdk', {
+      queueName: 'flagged-transactions-dlq-cdk',
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    })
+
     const flaggedMsgQueue = new sqs.Queue(this, 'flagged-transactions-cdk', {
       queueName: 'flagged-transactions-cdk',
       visibilityTimeout: cdk.Duration.seconds(90),
+      deadLetterQueue: {
+        queue: flaggedDlq,
+        maxReceiveCount: 5
+      }
     })
 
     const apiService = new ApplicationLoadBalancedFargateService(this, 'fraud-detection-service-cdk', {
