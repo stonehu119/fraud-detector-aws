@@ -20,8 +20,10 @@ export class InfrastructureStack extends cdk.Stack {
     const vpc = new ec2.Vpc(this, 'fraud-detection-vpc-cdk', {
       maxAzs: 2,
       vpcName: 'fraud-detection-vpc-cdk',
+      natGateways: 1,
       subnetConfiguration: [
-        { name: 'public', subnetType: ec2.SubnetType.PUBLIC }
+        { name: 'public', subnetType: ec2.SubnetType.PUBLIC },
+        { name: 'private', subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }
       ]
     })
 
@@ -38,7 +40,7 @@ export class InfrastructureStack extends cdk.Stack {
     const apiService = new ApplicationLoadBalancedFargateService(this, 'fraud-detection-service-cdk', {
       serviceName: 'fraud-detection-service-cdk',
       cluster: cluster,
-      taskSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+      taskSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       healthCheckGracePeriod: cdk.Duration.seconds(30),
       taskImageOptions: {
         image: ecs.ContainerImage.fromAsset(path.join(__dirname, "../../services/api/")),
@@ -52,7 +54,7 @@ export class InfrastructureStack extends cdk.Stack {
       memoryLimitMiB: 512,
       publicLoadBalancer: true,
       loadBalancerName: 'fraud-detection-alb-cdk',
-      assignPublicIp: true,
+      assignPublicIp: false,
     })
 
     apiService.targetGroup.configureHealthCheck({ path: "/health" })
