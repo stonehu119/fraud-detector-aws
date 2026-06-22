@@ -33,7 +33,28 @@ export async function detectFraud(transaction: Transaction): Promise<FraudCheckR
     }
   }
 
-  // check for multiple failed logins beforehand
+  // check for multiple failed logins
+  const FAILED_LOGINS_TABLE = process.env.FAILED_LOGINS_TABLE
+  if (!FAILED_LOGINS_TABLE) throw new Error('FAILED_LOGINS_TABLE is not set!')
+
+  const FAILED_LOGIN_WINDOW_MS = 1000 * 60 * 15 // 15 minutes
+  const FAILED_LOGIN_THRESHOLD = 5
+  const windowStart = new Date(new Date(transaction.timestamp).getTime() - FAILED_LOGIN_WINDOW_MS).toISOString()
+
+  const recentFailures = await docClient.send(new QueryCommand({
+    TableName: FAILED_LOGINS_TABLE,
+    KeyConditionExpression: 'account_id = :acct AND attempt_sort >= :windowStart',
+    ExpressionAttributeValues: {
+      ':acct': transaction.account_id,
+      ':windowStart': windowStart,
+    },
+    Select: 'COUNT',
+  }))
+  console.warn(recentFailures.Count)
+
+  if ((recentFailures.Count ?? 0) >= FAILED_LOGIN_THRESHOLD) {
+    reasons.push('FAILED_LOGIN_ATTEMPTS')
+  }
 
   return {
     flagged: reasons.length > 0,
