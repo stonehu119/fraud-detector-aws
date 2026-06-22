@@ -73,17 +73,39 @@ export class InfrastructureStack extends cdk.Stack {
       transactionHistoryTable.tableName,
     )
 
-    const flaggedTable = new dynamodb.Table(this, 'FlaggedTransactionsTable', {
-      tableName: 'flagged-transactions-cdk',
+    const usersTable = new dynamodb.Table(this, 'UsersTable', {
+      tableName: 'users-cdk',
       partitionKey: { name: 'account_id', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'flagged_sort', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
-    const usersTable = new dynamodb.Table(this, 'UsersTable', {
-      tableName: 'users-cdk',
+    usersTable.grantReadData(apiService.taskDefinition.taskRole)
+
+    apiService.taskDefinition.defaultContainer?.addEnvironment(
+      'USERS_TABLE',
+      usersTable.tableName
+    )
+
+    const failedLoginsTable = new dynamodb.Table(this, 'FailedLoginsTable', {
+      tableName: 'failed-logins-cdk',
       partitionKey: { name: 'account_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'attempt_sort', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    })
+
+    failedLoginsTable.grantReadWriteData(apiService.taskDefinition.taskRole)
+
+    apiService.taskDefinition.defaultContainer?.addEnvironment(
+      'FAILED_LOGINS_TABLE',
+      failedLoginsTable.tableName
+    )
+
+    const flaggedTable = new dynamodb.Table(this, 'FlaggedTransactionsTable', {
+      tableName: 'flagged-transactions-cdk',
+      partitionKey: { name: 'account_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'flagged_sort', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
