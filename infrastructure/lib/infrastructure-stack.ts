@@ -58,6 +58,21 @@ export class InfrastructureStack extends cdk.Stack {
     apiService.targetGroup.configureHealthCheck({ path: "/health" })
     flaggedMsgQueue.grantSendMessages(apiService.taskDefinition.taskRole)
 
+    const transactionHistoryTable = new dynamodb.Table(this, 'TransactionHistoryTable', {
+      tableName: 'transactions-cdk',
+      partitionKey: { name: 'account_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'transaction_sort', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    })
+
+    transactionHistoryTable.grantReadWriteData(apiService.taskDefinition.taskRole)
+
+    apiService.taskDefinition.defaultContainer?.addEnvironment(
+      'TRANSACTION_HISTORY_TABLE',
+      transactionHistoryTable.tableName,
+    )
+
     const flaggedTable = new dynamodb.Table(this, 'FlaggedTransactionsTable', {
       tableName: 'flagged-transactions-cdk',
       partitionKey: { name: 'account_id', type: dynamodb.AttributeType.STRING },
