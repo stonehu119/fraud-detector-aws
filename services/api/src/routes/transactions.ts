@@ -3,6 +3,8 @@ import type { ErrorResponse, Transaction, TransactionResponse } from '../types/t
 import { v4 as uuid } from 'uuid'
 import { detectFraud } from '../logic/detector.js'
 import sendFlaggedTransaction from '../lib/sqs.js'
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 
 const VALID_TRANSACTION_TYPES = ['withdrawal', 'deposit', 'transfer']
 
@@ -17,9 +19,24 @@ export async function handleTransaction(req: Request, res: Response<TransactionR
       return
     }
     const transaction = body as Transaction
+    transaction.timestamp = new Date().toISOString() // overwrite client provided time, otherwise timestamp can be spoofed to avoid fraud detection
+    const transactionId = uuid()
+
+    // directly write to DB
+    const TRANSACTION_HISTORY_TABLE = process.env.TRANSACTION_HISTORY_TABLE
+    if (!TRANSACTION_HISTORY_TABLE) throw new Error("TRANSACTION_HISTORY_TABLE is not set!")
+
+    const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}))
+    docClient.send(new PutCommand({
+      TableName: TRANSACTION_HISTORY_TABLE,
+      Item: {
+        ...transaction,
+        transactionId,
+        transaction_sort: `${transaction.timestamp}#${transactionId}`
+      }
+    }))
 
     // check for fraud
-    const transactionId = uuid()
     const fraudResult = await detectFraud(transaction)
 
     // send to SQS if fraudulent
@@ -36,7 +53,7 @@ export async function handleTransaction(req: Request, res: Response<TransactionR
       transaction_id: transactionId,
       account_id: transaction.account_id,
       status: fraudResult.flagged ? 'flagged' : 'approved',
-      reasons: fraudResult.reasons, // honestly maybe this isn't a good idea LOL
+      reasons: fraudResult.reasons, // honestly maybe this isn't a good idea LOL, in real environments we shouldn't return this
     })
   } catch (err) {
     console.error(`${err}\nRequest: ${JSON.stringify(req.body, null, 2)}`)
