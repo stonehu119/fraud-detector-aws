@@ -7,6 +7,7 @@ import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 
 const VALID_TRANSACTION_TYPES = ['withdrawal', 'deposit', 'transfer']
+const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}))
 
 export async function handleTransaction(req: Request, res: Response<TransactionResponse | ErrorResponse>): Promise<void> {
   try {
@@ -26,18 +27,17 @@ export async function handleTransaction(req: Request, res: Response<TransactionR
     const TRANSACTION_HISTORY_TABLE = process.env.TRANSACTION_HISTORY_TABLE
     if (!TRANSACTION_HISTORY_TABLE) throw new Error("TRANSACTION_HISTORY_TABLE is not set!")
 
-    const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}))
-    docClient.send(new PutCommand({
+    // check for fraud
+    const fraudResult = await detectFraud(transaction)
+
+    await docClient.send(new PutCommand({
       TableName: TRANSACTION_HISTORY_TABLE,
       Item: {
         ...transaction,
-        transactionId,
+        transaction_id: transactionId,
         transaction_sort: `${transaction.timestamp}#${transactionId}`
       }
     }))
-
-    // check for fraud
-    const fraudResult = await detectFraud(transaction)
 
     // send to SQS if fraudulent
     if (fraudResult.flagged) {
